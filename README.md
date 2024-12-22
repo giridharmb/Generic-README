@@ -175,3 +175,219 @@ root@vm-test-vm:~# mount -av
 Since we have added the entry to `/etc/fstab`,<br/>
 even if we reboot the VM, `/dev/sdb1` will be<br/>
 always mounted on the path `/datadisk`.<br/>
+
+#### jq CLI
+
+```json
+{
+    "cluster_health": "good",
+    "healthy_pods": 8,
+    "pods": [
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816553,
+            "overall_health": "good",
+            "system_hostname": "pod-1",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816538,
+            "overall_health": "good",
+            "system_hostname": "pod-2",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816534,
+            "overall_health": "good",
+            "system_hostname": "pod-3",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816534,
+            "overall_health": "good",
+            "system_hostname": "pod-4",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816535,
+            "overall_health": "good",
+            "system_hostname": "pod-5",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816541,
+            "overall_health": "good",
+            "system_hostname": "pod-6",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816530,
+            "overall_health": "good",
+            "system_hostname": "pod-7",
+            "warn_brokers": []
+        },
+        {
+            "failed_brokers": [],
+            "good_brokers": [
+                "broker-1.example.com:9093",
+                "broker-2.example.com:9093",
+                "broker-3.example.com:9093"
+            ],
+            "last_check": 1734816535,
+            "overall_health": "good",
+            "system_hostname": "pod-8",
+            "warn_brokers": []
+        }
+    ],
+    "total_pods": 8
+}
+```
+
+```bash
+jq '.cluster_health' file.json
+# Output: "good"
+
+jq '.healthy_pods' file.json
+# Output: 8
+
+jq '.pods[].system_hostname' file.json
+# Output:
+# "pod-1"
+# "pod-2"
+# "pod-3"
+# ...
+
+jq '.pods[].good_brokers | .[]' file.json
+# Output:
+# "broker-1.example.com:9093"
+# "broker-2.example.com:9093"
+# "broker-3.example.com:9093"
+# ...
+
+
+jq '.pods[].last_check' file.json
+# Output:
+# 1734816553
+# 1734816538
+# 1734816534
+# ...
+
+jq '.pods[] | select(.failed_brokers | length == 0)' file.json
+# Output: Entire pod objects with no failed brokers
+
+jq '.pods[] | select(.system_hostname == "pod-1") | .good_brokers' file.json
+# Output:
+# [
+#   "broker-1.example.com:9093",
+#   "broker-2.example.com:9093",
+#   ...
+# ]
+
+jq '[.pods[] | select(.overall_health == "good")] | length' file.json
+# Output: 8
+
+
+jq '[.pods[].good_brokers[]] | unique' file.json
+# Output:
+# [
+#   "broker-1.example.com:9093",
+#   "broker-2.example.com:9093",
+#   ...
+# ]
+
+
+jq '.pods[].warn_brokers | select(length > 0)' file.json
+# Output: No output as all arrays are empty
+
+
+jq '.pods[] | {(.system_hostname): .good_brokers}' file.json
+# Output:
+# {
+#   "pod-1": [
+#     "broker-1.example.com:9093",
+#     ...
+#   ]
+# }
+# ...
+
+
+jq '.pods[] | {system_hostname: .system_hostname, good_brokers_count: (.good_brokers | length)}' file.json
+# Output:
+# {
+#   "system_hostname": "pod-1",
+#   "good_brokers_count": 3
+# }
+# ...
+
+
+jq '.pods | min_by(.last_check)' file.json
+# Output:
+# {
+#   "failed_brokers": [],
+#   "good_brokers": [...],
+#   "last_check": 1734816530,
+#   ...
+# }
+
+
+jq '[.pods[].overall_health == "good"] | all' file.json
+# Output: true
+```
+
+```bash
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.cluster_health' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.healthy_pods' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[].system_hostname' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[].good_brokers | .[]' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[].last_check' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[] | select(.failed_brokers | length == 0)' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[] | select(.system_hostname == "pod-1") | .good_brokers' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '[.pods[] | select(.overall_health == "good")] | length' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '[.pods[].good_brokers[]] | unique' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[].warn_brokers | select(length > 0)' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[] | {(.system_hostname): .good_brokers}' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods[] | {system_hostname: .system_hostname, good_brokers_count: (.good_brokers | length)}' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '.pods | min_by(.last_check)' 
+curl -X GET -H "accept:applicaton/json" https://my-system.example.com/api/health 2>/dev/null | jq '[.pods[].overall_health == "good"] | all' 
+```
